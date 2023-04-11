@@ -1,10 +1,8 @@
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
-
 import java.io.File;
 import java.io.IOException;
-
 import javax.sound.sampled.*;
 
 /**
@@ -27,6 +25,7 @@ public class SudokuMain extends JFrame {
    StartingPanel start = new StartingPanel();
    // DifficultyPanel diff = new DifficultyPanel();
    GridBagConstraints gbc = new GridBagConstraints();
+   topAndBottomPane topPane = new topAndBottomPane(), bottomPane = new topAndBottomPane();
    MenuBar menubar = new MenuBar();
    AudioInputStream soundStream;
 
@@ -205,15 +204,11 @@ public class SudokuMain extends JFrame {
       backcp.setLayout(new BorderLayout());
 
       // top and bottom pane
-      JPanel topPane = new JPanel();
-      topPane.setLayout(new GridLayout(1,2));
       topPane.add(header);
       topPane.add(new EmptyPanel());
       backcp.add(topPane, BorderLayout.NORTH);
       backcp.add(new EmptyPanel(), BorderLayout.WEST);
-      JPanel bottomPane = new JPanel();
       bottomPane.add(statusBar);
-      bottomPane.setLayout(new GridLayout(1, 2));
       bottomPane.add(new EmptyPanel());
       backcp.add(bottomPane, BorderLayout.SOUTH);
 
