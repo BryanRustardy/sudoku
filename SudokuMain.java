@@ -4,6 +4,8 @@ import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import javax.sound.sampled.*;
+import java.awt.BorderLayout;
+import java.util.Arrays;
 
 /**
  * The main Sudoku program
@@ -14,14 +16,14 @@ public class SudokuMain extends JFrame {
 
    // private variables
    GameBoardPanel board = new GameBoardPanel();
-   JButton btnReset = new JButton("Reset"), btnNewGame = new JButton("New Game"), btnHint = new JButton("Hint");
    JPanel sidebar, header, statusBar;
    RightPane rightpane;
-   CellsLeftInterface cellsInterface;
+   BoxesLeft cellBoxesPanel;
    MainBackground backcp;
-   JLabel lblTime = new JLabel("00:00"), lblMistakesCount = new JLabel("0"), lblHintLeft = new JLabel("3"),
-         lblCellsLeft;
-   int hintCount = 3, cellsLeft;
+   JLabel lblTime = new JLabel("00:00"), lblHintLeft = new JLabel("Hint Left: " + 3),
+         lblCellsLeft, lblMistakes = new JLabel("Mistakes: " + 0);
+   int hintCount = 3, cellsLeft, mistakesCount = 0;
+   int[] boxesCount = new int[9];
    StartingPanel start = new StartingPanel();
    // DifficultyPanel diff = new DifficultyPanel();
    GridBagConstraints gbc = new GridBagConstraints();
@@ -114,57 +116,31 @@ public class SudokuMain extends JFrame {
       });
 
       // ------------------sidebar - re-start and reset button-----------------
-
-      CellsLeftInterface cellBoxesPanel = new CellsLeftInterface();
-      JTextField[] cellBoxesArray = cellBoxesPanel.getCellBoxes();
-
-      // TODO: set the initial color of cellBoxesArray, when all the sudoku of that number filled, decrease its opacity
-      // for (int i = 0; i < cellBoxesArray.length; i++) {
-      /* JTextField cellBox = cellBoxesArray[i];
-         cellBox.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                  // TODO: set color here
-            }
-         });*/
-         
-   
       // toggle theme menu
       menubar.toggleThemeItem.addActionListener(new toggleTheme());
-
-      // hint button
-      // sidebar.add(btnHint);
-      // btnHint.addActionListener(new hintListener());
-
-      // JPanel hintPanel = new JPanel();
-      // hintPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 0, 0));
-      // hintPanel.add(new JTransparentLabel("Hint Left: "));
-      // hintPanel.add(lblHintLeft);
-      // hintPanel.setOpaque(false);
-      // sideBarContainer.add(hintPanel);
-
-      // mistakes count
-      // JPanel mistakePanel = new JPanel();
-      // mistakePanel.setOpaque(false);
-      // mistakePanel.add(new JTransparentLabel("Mistakes: "));
-      // mistakePanel.add(lblMistakesCount);
-      // sideBarContainer.add(mistakePanel);
-
-      /*
-       * for (int row = 0; row < GameBoardPanel.GRID_SIZE; ++row) {
-       * for (int col = 0; col < GameBoardPanel.GRID_SIZE; ++col) {
-       * Cell referenceCell = board.getCell(row, col);
-       * if (referenceCell.isEditable()) {
-       * referenceCell.addKeyListener(new mistakeListener());
-       * }
-       * }
-       * }
-       */
 
       // ---------- status bar -----------
       statusBar = new JPanel();
       lblCellsLeft = new JLabel("Cells left: " + cellsLeft);
+
+      lblMistakes.setOpaque(false);
+      lblMistakes.add(new JTransparentLabel("Mistakes: " + mistakesCount));
+      for (int row = 0; row < GameBoardPanel.GRID_SIZE; ++row) {
+         for (int col = 0; col < GameBoardPanel.GRID_SIZE; ++col) {
+            Cell referenceCell = board.getCell(row, col);
+            if (referenceCell.isEditable()) {
+               referenceCell.addKeyListener(new mistakeListener());
+               referenceCell.addKeyListener(new boxLeftListener());
+            }
+         }
+      }
+
+      statusBar.add(lblMistakes);
       statusBar.add(lblCellsLeft);
+      statusBar.add(lblHintLeft);
+      lblMistakes.setBorder(BorderFactory.createEmptyBorder(8, 50, 8, 50));
+      lblCellsLeft.setBorder(BorderFactory.createEmptyBorder(8, 50, 8, 50));
+      lblHintLeft.setBorder(BorderFactory.createEmptyBorder(8, 50, 8, 50));
 
       // add background music (when game started)
       soundStream = AudioSystem.getAudioInputStream(new File("bg_music_sudoku.wav"));
@@ -228,9 +204,9 @@ public class SudokuMain extends JFrame {
       // right pane - half right of the screen,include the sidebar
       rightpane = new RightPane();
       sidebar = rightpane.getSideBar();
-      cellsInterface = new CellsLeftInterface();
+      cellBoxesPanel = new BoxesLeft();
       sidebar.add(new EmptyPanel());
-      sidebar.add(cellsInterface);
+      sidebar.add(cellBoxesPanel);
       sidebar.add(new EmptyPanel());
       mainScreen.add(rightpane);
 
@@ -243,6 +219,10 @@ public class SudokuMain extends JFrame {
       bgMusic.setFramePosition(0);
       bgMusic.start();
       bgMusic.loop(Clip.LOOP_CONTINUOUSLY);
+      initizializeBoxCount();
+      recolorFont();
+      // to check
+      System.out.println(Arrays.toString(boxesCount));
 
       cp.add(backcp);
 
@@ -251,7 +231,7 @@ public class SudokuMain extends JFrame {
       bottomPane.setOpaque(false);
       sidebar.setOpaque(false);
       header.setOpaque(false);
-      cellsInterface.setOpaque(false);
+      cellBoxesPanel.setOpaque(false);
       rightpane.setOpaque(false);
       statusBar.setOpaque(false);
       mainScreen.setOpaque(false);
@@ -280,6 +260,47 @@ public class SudokuMain extends JFrame {
       start.getDifficultyButton("medium").setEnabled(false);
       start.getDifficultyButton("hard").setEnabled(false);
       start.getDifficultyButton("insane").setEnabled(false);
+   }
+
+   private void initizializeBoxCount() {
+      for (int r=0; r<9; ++r) {
+         for (int c=0; c<9; ++c) {
+            Cell referenceCell = board.getCell(r, c);
+            int cellNumber = referenceCell.number-1;
+            if (referenceCell.status == CellStatus.GIVEN) {
+               boxesCount[cellNumber] += 1;
+            }
+         }
+      }
+   }
+
+   public void recolorFont() {
+      if (GameBoardPanel.isDarkMode) {
+         lblCellsLeft.setForeground(Color.white);
+         lblHintLeft.setForeground(Color.white);
+         lblMistakes.setForeground(Color.white);
+         lblTime.setForeground(Color.white);
+
+         JTextField[] cellBoxesArray = cellBoxesPanel.getCellBoxes();
+         for (int i=0; i<9; ++i) {
+            JTextField referenceBox = cellBoxesArray[i];
+            referenceBox.setForeground(Color.white);
+            referenceBox.setBackground(new Color(121,121,121));
+         }
+
+      } else {
+         lblTime.setForeground(Color.black);
+         lblHintLeft.setForeground(Color.black);
+         lblMistakes.setForeground(Color.black);
+         lblTime.setForeground(Color.black);
+
+         JTextField[] cellBoxesArray = cellBoxesPanel.getCellBoxes();
+         for (int i=0; i<9; ++i) {
+            JTextField referenceBox = cellBoxesArray[i];
+            referenceBox.setForeground(Color.black);
+            referenceBox.setBackground(new Color(242, 232, 196));
+         }
+      }
    }
 
    private class hintListener implements ActionListener {
@@ -317,6 +338,7 @@ public class SudokuMain extends JFrame {
                board.getCell(row, col).paint();
             }
          }
+         recolorFont();
          imgPath = GameBoardPanel.isDarkMode ? "bgdark.jpeg" : "bglight.png";
          backcp.setBackgroundImage(imgPath);
          backcp.revalidate();
@@ -324,10 +346,12 @@ public class SudokuMain extends JFrame {
       }
    }
 
+   // TODO Cellstatus won't update
    private class mistakeListener implements KeyListener {
       @Override
       public void keyTyped(KeyEvent evt) {
          Cell sourceCell = (Cell) evt.getSource();
+         System.out.println(sourceCell.number);
 
          char key = evt.getKeyChar();
          if (!sourceCell.isEditable())
@@ -342,10 +366,8 @@ public class SudokuMain extends JFrame {
                sourceCell.setEditable(false);
             } else {
                sourceCell.status = CellStatus.WRONG_GUESS;
-               int tmp = Integer.parseInt((lblMistakesCount.getText()));
-               tmp++;
-               lblMistakesCount.setText(Integer.toString(tmp));
-               System.out.println(lblMistakesCount.getText());
+               ++mistakesCount;
+               lblMistakes.setText("Mistakes: " + mistakesCount);
             }
             numberIn = numberIn % 10;
             sourceCell.setText(Integer.toString(numberIn));
@@ -367,6 +389,48 @@ public class SudokuMain extends JFrame {
 
       @Override
       public void keyReleased(KeyEvent evt) {
+      }
+   }
+
+   // TODO cell wont lower opacity even though cell count == 9
+   private class boxLeftListener implements KeyListener {
+      @Override
+      public void keyTyped(KeyEvent evt) {
+         Cell sourceCell = (Cell) evt.getSource();
+         char key = evt.getKeyChar();
+         if (!sourceCell.isEditable())
+            return;
+
+         int numberIn = key - '0';
+         if (numberIn == sourceCell.number) {
+            boxesCount[numberIn] += 1;
+            System.out.println(boxesCount);
+         } 
+         
+         // check if any has reached 9 yet
+         for (int boxNumber =0; boxNumber < 9; ++boxNumber) {
+            if (boxesCount[boxNumber] == 9) {
+               // iterate through all the boxes
+               JTextField[] cellBoxesArray = cellBoxesPanel.getCellBoxes();
+               for (int i=0; i<9; ++i) {
+                  JTextField referenceBox = cellBoxesArray[i];
+                  if (Integer.parseInt(referenceBox .getText())-1 == boxNumber) {
+                     referenceBox.setOpaque(false); // Set the text field to be transparent
+                     referenceBox.setBackground(new Color(0,0,0,128)); // Set the background color with an alpha value of 128 (out of 255)
+                  }
+               }
+            }
+         }
+      }
+
+      @Override
+      public void keyPressed(KeyEvent evt) {
+         // handle key pressed event here
+      }
+
+      @Override
+      public void keyReleased(KeyEvent evt) {
+         // handle key released event here
       }
    }
 }

@@ -1,10 +1,10 @@
 import java.awt.*;
 import javax.swing.*;
 
-public class CellsLeftInterface extends JPanel {
+public class BoxesLeft extends JPanel {
     private JTextField[] cellBoxes;
 
-    public CellsLeftInterface() {
+    public BoxesLeft() {
         setLayout(new GridLayout(10, 1));
         cellBoxes = new JTextField[9];
 
